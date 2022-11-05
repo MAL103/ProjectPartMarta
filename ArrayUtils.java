@@ -44,8 +44,20 @@ public final class ArrayUtils {
      * @throws AssertionError if one of the parameters is null
      */
     public static boolean equals(byte[][] a1, byte[][] a2){
-
-        return Helper.fail("Not Implemented");
+        assert ((a1==null && a2==null) || (a1 !=null && a2 !=null));
+        if (a1.length != a2.length) {
+            return false;
+        }
+        else{
+            for(int i=0;i< a1.length; ++i) {
+                for (int j = 0; j < a1[i].length; ++j) {
+                    if (a1[i][j] != a2[i][j]){
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     // ==================================================================================
@@ -113,7 +125,12 @@ public final class ArrayUtils {
      * @throws AssertionError if the input is null
      */
     public static byte[] concat(byte ... bytes){
-        return Helper.fail("Not Implemented");
+        assert(bytes!=null);
+        byte[] tab= new byte[bytes.length];
+        for(int i=0;i<bytes.length;i++){
+            tab[i]=bytes[i];
+        }
+        return tab;
     }
 
     /**
@@ -124,7 +141,23 @@ public final class ArrayUtils {
      * or one of the inner arrays of input is null.
      */
     public static byte[] concat(byte[] ... tabs){
-        return Helper.fail("Not Implemented");
+        assert (tabs!=null);
+        for(int i=0;i<tabs.length;i++){
+            assert(tabs[i]!=null);
+        }
+        int totalLength = 0;
+        //build length
+        for(int i=0;i<tabs.length;i++){
+            totalLength += tabs[i].length;
+        }
+        //build the array
+        byte[] tab = new byte[totalLength];
+        int index=0;
+        for(int i=0;i< tabs.length;++i){
+            System.arraycopy(tabs[i],0,tab,index,tabs[i].length);
+            index+=tabs[i].length;
+        }
+        return tab;
     }
 
     // ==================================================================================
@@ -141,7 +174,16 @@ public final class ArrayUtils {
      * start + length should also be smaller than the input's length
      */
     public static byte[] extract(byte[] input, int start, int length){
-        return Helper.fail("Not Implemented");
+        assert(input!=null);
+        assert(start>=0 && start<input.length);
+        assert(length>=0 && length<input.length);
+        assert((start+length) <=input.length);
+        byte[] extract= new byte[length];
+        int i=start;
+        for(int j=0;j<length;j++){
+            extract[j] = input[j+start];
+        }
+        return extract;
     }
 
     /**
@@ -191,7 +233,37 @@ public final class ArrayUtils {
      * or one of the inner arrays of input is null
      */
     public static byte[][] imageToChannels(int[][] input){
-        return Helper.fail("Not Implemented");
+        assert(input!=null);
+        int line_length=input[0].length;
+        for(int i=1;i<input.length;++i){
+            assert (input[i] != null);
+            assert (input[i].length == line_length);
+        }
+
+        byte[] r= new byte[input.length*input[0].length];
+        byte[] g=new byte[input.length*input[0].length];
+        byte[] b=new byte[input.length*input[0].length];
+        byte[] a=new byte[input.length*input[0].length];
+        int k=0;
+        for (int i=0;i<input.length;++i) {
+            for (int j = 0; j < input[i].length; ++j) {
+                a[k] =(byte)((input[i][j]>>24) & 0xFF);
+                r[k] = (byte)((input[i][j] >> 16) & 0xFF);
+                g[k] = (byte)((input[i][j] >> 8) & 0xFF);
+                b[k] = (byte)(input[i][j] & 0xFF);
+                k++;
+            }
+        }
+        byte[][] output= new byte[input.length*input[0].length][4];
+        for(int i=0;i<input.length*input[0].length;++i){
+
+            output[i][0] = r[i];
+            output[i][1] = g[i];
+            output[i][2] = b[i];
+            output[i][3] = a[i];
+
+        }
+        return output;
     }
 
     /**
@@ -209,7 +281,39 @@ public final class ArrayUtils {
      * or width is invalid
      */
     public static int[][] channelsToImage(byte[][] input, int height, int width){
-        return Helper.fail("Not Implemented");
+        assert (input[0].length==4);
+        assert(input !=null);
+        assert(input.length == height*width);
+        int z=0;
+        for(int i=0;i<input.length;i++) {
+            assert (input[i] != null);
+        }
+        int[] a= new int[input.length];
+        int[] r= new int[input.length];
+        int[] g= new int[input.length];
+        int[] b= new int[input.length];
+        int [][]output = new int[height][width];
+        int k=0;
+        for(int i=0;i<input.length;i++){
+            r[k]=input[i][0];
+            g[k]=input[i][1];
+            b[k]=input[i][2];
+            //System.out.print(b[k]);
+            a[k]=input[i][3];
+            k++;
+        }
+        //for( int element:b){ System.out.print(element);}
+        for(int i=0;i<height;i++)
+        {
+            for (int j = 0; j < width; j++) {
+                if (z != k) {
+                    output[i][j] = ((a[z] << 24) + (r[z] << 16) + (g[z] << 8) + b[z]);
+                    z++;
+                }
+            }
+        }
+
+        return output;
     }
 
 }

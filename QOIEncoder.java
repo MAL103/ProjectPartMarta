@@ -1,4 +1,5 @@
 package cs107;
+import java.util.ArrayList;
 
 /**
  * "Quite Ok Image" Encoder
@@ -48,7 +49,14 @@ public final class QOIEncoder {
      * @return (byte[]) - Encoding of the pixel using the QOI_OP_RGB schema
      */
     public static byte[] qoiOpRGB(byte[] pixel){
-        return Helper.fail("Not Implemented");
+        assert(pixel.length==4);
+        byte[] encoding = new byte[4];
+        encoding[0]=QOISpecification.QOI_OP_RGB_TAG;
+        for(int i=1;i<4;i++){
+            encoding[i]=pixel[i-1];
+        }
+        return encoding;
+
     }
 
     /**
@@ -58,7 +66,13 @@ public final class QOIEncoder {
      * @return (byte[]) Encoding of the pixel using the QOI_OP_RGBA schema
      */
     public static byte[] qoiOpRGBA(byte[] pixel){
-        return Helper.fail("Not Implemented");
+        assert(pixel.length==4);
+        byte[] encoding=new byte[5];
+        encoding[0]=QOISpecification.QOI_OP_RGBA_TAG;
+        for(int i=1;i<5;i++) {
+            encoding[i] = pixel[i - 1];
+        }
+        return encoding;
     }
 
     /**
@@ -101,7 +115,21 @@ public final class QOIEncoder {
      * @return (byte[]) - Encoding of the given difference
      */
     public static byte[] qoiOpLuma(byte[] diff){
-        return Helper.fail("Not Implemented");
+        assert(diff!=null);
+        assert(diff.length==3);
+        assert(-33<diff[1]&&diff[1]<32);
+        assert(-9<(diff[0]-diff[1])&&(diff[0]-diff[1])<8);
+        assert(-9<(diff[2]-diff[1])&&(diff[2]-diff[1])<8);
+        byte dr=diff[0];
+        byte dg=(byte)(diff[1]+32);
+        byte db=diff[2];
+        byte drg= (byte)((dr-diff[1])+8);
+        byte dbg=(byte)((db-diff[1])+8);
+        byte[] encoding =new byte[2];
+        encoding[0]= (byte)((QOISpecification.QOI_OP_LUMA_TAG) | dg);
+        encoding[1]=(byte)((drg<<4)|(dbg));
+        return encoding;
+
     }
 
     /**
@@ -128,7 +156,75 @@ public final class QOIEncoder {
      * @return (byte[]) - "Quite Ok Image" representation of the image
      */
     public static byte[] encodeData(byte[][] image){
-        return Helper.fail("Not Implemented");
+        byte[] previous_pixel = QOISpecification.START_PIXEL;
+        byte[][] hash_table = new byte[64][4];
+        byte[] repeat = new byte[1];
+        //ArrayList<byte[]> repetitions= new ArrayList<byte[]>();
+        ArrayList<byte[]> encoding = new ArrayList<byte[]>();
+        int counter = 0;
+        byte[] index = new byte[1];
+        /**
+         * Iterate over pixels
+         */
+        for (int i = 0; i < image.length; ++i) {
+            if (i!=0){
+                previous_pixel = image[i-1];
+            }
+            if (ArrayUtils.equals(image[i],previous_pixel)) {
+                counter += 1;
+                if ((counter == 62) || (i == image.length - 1)) {
+                    encoding.add(qoiOpRun((byte) counter));
+                    counter = 0;
+                }
+                continue;
+            }
+            else {
+                if (i!=0 && counter>0){
+                    encoding.add(qoiOpRun((byte) counter));
+                    counter = 0;
+                }
+            }
+            if (image[i] == hash_table[QOISpecification.hash(image[i])]) {
+                encoding.add(ArrayUtils.wrap((byte) i));
+                continue;
+            } else {
+                hash_table[QOISpecification.hash(image[i])] = image[i];
+            }
+            if (image[i][3] == previous_pixel[3]) {
+                byte dr = (byte) (image[i][0] - previous_pixel[0]);
+                byte dg = (byte) (image[i][1] - previous_pixel[1]);
+                byte db = (byte) (image[i][2] - previous_pixel[2]);
+                boolean small = true;
+                boolean similar = true;
+                byte[] diff = {dr, dg, db};
+                for (int j = 0; j < 3; j++) {
+                    if ((-2 > diff[j]) || (diff[j] > 2)) {
+                        small = false;
+                    }
+                    if ((-33 > diff[1]) || (diff[1] > 32) ||
+                            (-9 > (diff[0] - diff[1])) || (diff[0] - diff[1] > 8) ||
+                            (-9 > (diff[2] - diff[1]) || (diff[2] - diff[1] > 8))) {
+                        similar = false;
+                    }
+                }
+                if (small) {
+                    encoding.add(qoiOpDiff(diff));
+                    continue;
+                } else if (similar) {
+                    encoding.add(qoiOpLuma(diff));
+                    continue;
+                } else {
+                    encoding.add(qoiOpRGB(image[i]));
+                    continue;
+                }
+            }
+            else {
+                encoding.add(qoiOpRGBA(image[i]));
+            }
+        }
+        byte[][] encodedPixels1 = encoding.toArray(new byte[0][]);
+        byte[]x= ArrayUtils.concat(encodedPixels1);
+        return x;
     }
 
     /**
