@@ -222,9 +222,9 @@ public final class QOIEncoder {
                 encoding.add(qoiOpRGBA(image[i]));
             }
         }
-        byte[][] encodedPixels1 = encoding.toArray(new byte[0][]);
-        byte[]x= ArrayUtils.concat(encodedPixels1);
-        return x;
+        byte[][] encodedPixels2D = encoding.toArray(new byte[0][]);
+        byte[] encodedPixels1D = ArrayUtils.concat(encodedPixels2D);
+        return encodedPixels1D;
     }
 
     /**
