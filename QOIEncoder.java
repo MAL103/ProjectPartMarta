@@ -33,7 +33,7 @@ public final class QOIEncoder {
         byte[] height = ArrayUtils.concat((byte)((image.data()[0]).length>>24),(byte)((image.data()[0]).length>>16),(byte)((image.data()[0]).length>>8),(byte)((image.data()[0]).length));
         byte channels = image.channels();
         byte colorSpace = image.color_space();
-        byte[] header = new byte[]{113, 111, 105, 102,height[0],height[1],height[2],height[3],width[0],width[1],width[2],width[3],channels,colorSpace};
+        byte[] header = new byte[]{(byte)QOISpecification.QOI_MAGIC[0], (byte)QOISpecification.QOI_MAGIC[1], (byte)QOISpecification.QOI_MAGIC[2], (byte)QOISpecification.QOI_MAGIC[3],height[0],height[1],height[2],height[3],width[0],width[1],width[2],width[3],channels,colorSpace};
         return header;
     }
 
@@ -69,7 +69,7 @@ public final class QOIEncoder {
      */
     public static byte[] qoiOpIndex(byte index){
         assert (index<64 && index>=0);
-        return ArrayUtils.wrap(index);
+        return ArrayUtils.wrap((byte)(QOISpecification.QOI_OP_INDEX_TAG|index));
     }
 
     /**
@@ -84,7 +84,7 @@ public final class QOIEncoder {
         for(int i=0;i<diff.length;i++){
             assert(diff[i]>=-2 && diff[i]<2);
         }
-        byte tag = 0b01000000;
+        byte tag = QOISpecification.QOI_OP_DIFF_TAG;
         byte dr = (byte) ((diff[0]+2)<<4);
         byte dg = (byte) ((diff[1]+2)<<2);
         byte db = (byte) (diff[2]+2);
@@ -112,7 +112,7 @@ public final class QOIEncoder {
      */
     public static byte[] qoiOpRun(byte count){
         assert(count>=1 && count<=62);
-        byte[] encodePixel = new byte[]{(byte)(0b11000000 | (count-1))};
+        byte[] encodePixel = new byte[]{(byte)(QOISpecification.QOI_OP_RUN_TAG | (count-1))};
         return encodePixel;
 
     }
@@ -140,7 +140,20 @@ public final class QOIEncoder {
      * @throws AssertionError if the image is null
      */
     public static byte[] qoiFile(Helper.Image image){
-        return Helper.fail("Not Implemented");
+        assert(image!=null);
+        byte[] header = qoiHeader(image);
+        byte[][] content = new byte[image.data().length][];
+        /**
+         * Convert image.data() from int array to byte array to use in encodeData function
+         */
+        for (int i=0;i<image.data().length;i++){
+            for(int ii=0;ii<image.data()[0].length;ii++){
+                content[i][ii] = (byte) image.data()[i][ii];
+            }
+        }
+        byte[] encodeContent = encodeData(content);
+        byte[] encodePixels = ArrayUtils.concat(header,encodeContent,QOISpecification.QOI_EOF);
+        return encodePixels;
     }
 
 }

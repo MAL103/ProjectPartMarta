@@ -27,7 +27,14 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.1
      */
     public static int[] decodeHeader(byte[] header){
-        return Helper.fail("Not Implemented");
+        assert(header!=null && header.length==QOISpecification.HEADER_SIZE);
+        assert(ArrayUtils.extract(header,0,4)==QOISpecification.QOI_MAGIC);
+        assert(header[12]==QOISpecification.RGB || header[12]==QOISpecification.RGBA);
+        assert(header[13]==QOISpecification.sRGB || header[13]==QOISpecification.ALL);
+        int height = (int)(header[4]<<24 | header[5]<<16 | header[6]<<8 | header[7]);
+        int width = (int)(header[8]<<24 | header[9]<<16 | header[10]<<8 | header[11]);
+        int[] decodedHeader = new int[]{width,height,(int)header[12],(int)header[13]};
+        return  decodedHeader;
     }
 
     // ==================================================================================
@@ -69,9 +76,16 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.2.4
      */
     public static byte[] decodeQoiOpDiff(byte[] previousPixel, byte chunk){
-        return Helper.fail("Not Implemented");
+        assert(previousPixel!=null && previousPixel.length==4);
+        byte tag = QOISpecification.QOI_OP_DIFF_TAG;
+        assert(((chunk>>6)<<6)==tag);
+        byte dr = (byte)(((chunk-tag)>>4)-2);
+        byte dg = (byte)(((chunk-tag-((dr+2)<<4))>>2)-2);
+        byte db = (byte)((chunk-tag-((dr+2)<<4)-((dg+2)<<2))-2);
+        byte[] thisPixel = new byte[]{(byte)(previousPixel[0]+dr),(byte)(previousPixel[1]+dg),(byte)(previousPixel[2]+db),(byte)(previousPixel[3])};
+        return thisPixel;
     }
-
+//
     /**
      * Create a new pixel following the "QOI_OP_LUMA" schema
      * @param previousPixel (byte[]) - The previous pixel
@@ -93,7 +107,20 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.2.6
      */
     public static int decodeQoiOpRun(byte[][] buffer, byte[] pixel, byte chunk, int position){
-        return Helper.fail("Not Implemented");
+        assert(buffer!=null && pixel!=null && position>0 && position<buffer.length);
+        assert(pixel.length==4 && buffer[0].length==4);
+        int count =-1;
+        int repetitions = chunk - QOISpecification.QOI_OP_RUN_TAG +1;
+        assert(buffer.length>=position+repetitions);
+        for (int i=position;i<=repetitions;i++){
+            buffer[i] = pixel;
+        }
+        for (byte[] pix:buffer){
+            if (pix==pixel){
+                count+=1;
+            }
+        }
+        return count;
     }
 
     // ==================================================================================

@@ -171,6 +171,7 @@ public final class ArrayUtils {
             }
             output[i] = subList;
         }
+        System.out.println(output);
         return output;
     }
 
