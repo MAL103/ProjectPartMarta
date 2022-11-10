@@ -28,12 +28,12 @@ public final class QOIDecoder {
      */
     public static int[] decodeHeader(byte[] header){
         assert(header!=null && header.length==QOISpecification.HEADER_SIZE);
-        assert(ArrayUtils.extract(header,0,4)==QOISpecification.QOI_MAGIC);
+        assert(ArrayUtils.equals(ArrayUtils.extract(header,0,4),QOISpecification.QOI_MAGIC));
         assert(header[12]==QOISpecification.RGB || header[12]==QOISpecification.RGBA);
         assert(header[13]==QOISpecification.sRGB || header[13]==QOISpecification.ALL);
         int height = (int)(header[4]<<24 | header[5]<<16 | header[6]<<8 | header[7]);
         int width = (int)(header[8]<<24 | header[9]<<16 | header[10]<<8 | header[11]);
-        int[] decodedHeader = new int[]{width,height,(int)header[12],(int)header[13]};
+        int[] decodedHeader = new int[]{height,width,(int)header[12],(int)header[13]};
         return  decodedHeader;
     }
 
@@ -52,7 +52,17 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.2.1
      */
     public static int decodeQoiOpRGB(byte[][] buffer, byte[] input, byte alpha, int position, int idx){
-        return Helper.fail("Not Implemented");
+        assert (buffer != null);
+        assert (input != null);
+        assert(position>=0 && position<buffer.length);
+        assert (0 <= idx && idx < input.length);
+        assert(idx+2<input.length);
+        for (int i=0;i<4;i++){
+            buffer[position][i]=input[idx];
+            idx++;
+        }
+        buffer[position][3]=alpha;
+        return QOISpecification.RGB;
     }
 
     /**
@@ -65,7 +75,16 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.2.2
      */
     public static int decodeQoiOpRGBA(byte[][] buffer, byte[] input, int position, int idx){
-        return Helper.fail("Not Implemented");
+        assert (buffer != null);
+        assert (input != null);
+        assert(position>=0 && position<buffer.length);
+        assert (0 <= idx && idx < input.length);
+        assert(idx+3<input.length);
+        for (int i=0;i<4;i++){
+            buffer[position][i]=input[idx];
+            idx++;
+        }
+        return QOISpecification.RGBA;
     }
 
     /**
@@ -94,7 +113,21 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.2.5
      */
     public static byte[] decodeQoiOpLuma(byte[] previousPixel, byte[] data){
-        return Helper.fail("Not Implemented");
+        assert(previousPixel!=null);
+        assert(data!=null);
+        byte tag=QOISpecification.QOI_OP_LUMA_TAG;
+        assert(((data[0]>>6)<<6)==tag);
+        byte[] current_pixel= new byte[4];
+        byte dg=(byte)((data[0]-tag)-32);
+        byte drg=(byte)((data[1]>>>4)&0b00001111);
+        byte dr=(byte)((drg+dg)-8);
+        byte dbg=(byte)(data[1]-(drg<<4));
+        byte db=(byte)((dbg+dg)-8);
+        current_pixel[0]= (byte) (previousPixel[0]+dr);
+        current_pixel[1]= (byte) (previousPixel[1]+dg);
+        current_pixel[2]= (byte) (previousPixel[2]+db);
+        current_pixel[3]=previousPixel[3];
+        return current_pixel;
     }
 
     /**
@@ -107,12 +140,12 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.2.6
      */
     public static int decodeQoiOpRun(byte[][] buffer, byte[] pixel, byte chunk, int position){
-        assert(buffer!=null && pixel!=null && position>0 && position<buffer.length);
+        assert(buffer!=null && pixel!=null && position>=0 && position<buffer.length);
         assert(pixel.length==4 && buffer[0].length==4);
         int count =-1;
-        int repetitions = chunk - QOISpecification.QOI_OP_RUN_TAG +1;
+        int repetitions = chunk - QOISpecification.QOI_OP_RUN_TAG+1;
         assert(buffer.length>=position+repetitions);
-        for (int i=position;i<=repetitions;i++){
+        for (int i=position;i<position+repetitions;i++){
             buffer[i] = pixel;
         }
         for (byte[] pix:buffer){
@@ -136,7 +169,49 @@ public final class QOIDecoder {
      * @throws AssertionError See handouts section 6.3
      */
     public static byte[][] decodeData(byte[] data, int width, int height){
-        return Helper.fail("Not Implemented");
+        assert(data!=null);
+        assert(width>0 && height>0);
+        byte[] previous_pixel = QOISpecification.START_PIXEL;
+        byte[][] hash_table = new byte[64][4];
+        int i=0;
+        int ii = 0;
+        int repeats;
+        byte[][] buffer = new byte[(width*height)][4];
+        while (i<data.length && ii<buffer.length){
+            if (data[i]== QOISpecification.QOI_OP_RGBA_TAG){
+                i+= decodeQoiOpRGBA(buffer,data,ii,i+1)+1;
+            }
+            else if (data[i]== QOISpecification.QOI_OP_RGB_TAG){
+                i+= decodeQoiOpRGB(buffer,data,buffer[ii-1][3],ii,i+1)+1;
+            }
+            else{
+                byte tag = (byte) ((data[i]>>6)<<6);
+                switch (tag){
+                    case QOISpecification.QOI_OP_RUN_TAG:
+                        repeats = decodeQoiOpRun(buffer,previous_pixel,data[i],ii);
+                        ii+=repeats;
+                        i+=1;
+                        break;
+                    case QOISpecification.QOI_OP_INDEX_TAG:
+                        buffer[ii]=hash_table[data[i]-QOISpecification.QOI_OP_INDEX_TAG];
+                        i++;
+                        break;
+                    case QOISpecification.QOI_OP_LUMA_TAG:
+                        buffer[ii] = decodeQoiOpLuma(previous_pixel,ArrayUtils.extract(data,i,2));
+                        i+=2;
+                        break;
+                    case QOISpecification.QOI_OP_DIFF_TAG:
+                        buffer[ii] = decodeQoiOpDiff(previous_pixel,data[i]);
+                        i++;
+                        break;
+                }
+            }
+            previous_pixel = buffer[ii];
+            hash_table[QOISpecification.hash(buffer[ii])] = buffer[ii];
+            ii++;
+        }
+        assert(ii==buffer.length && i==data.length);
+        return buffer;
     }
 
     /**

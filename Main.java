@@ -40,34 +40,35 @@ public final class Main {
          */
 
         // ========== Test ArrayUtils ==========
-        //assert testWrap();
-        //assert testToInt();
-        //assert testFromInt(12345678));
-        //assert testConcatArrayBytes();
-        //assert testConcatBytes();
-        //assert testExtract();
-        //assert testPartition();
-        //assert testImageToChannels();
-        //assert testChannelsToImage();
+        assert testEquals();
+        assert testWrap();
+        assert testToInt();
+        assert testFromInt();
+        assert testConcatArrayBytes();
+        assert testConcatBytes();
+        assert testExtract();
+        assert testPartition();
+        assert testImageToChannels();
+        assert testChannelsToImage();
 
         // ========== Test QOIEncoder ==========
-        //assert testQoiHeader();
-        //assert testQoiOpRGB();
-        //assert testQoiOpRGBA();
-        //assert testQoiOpIndex();
-        //assert testQoiOpDiff();
-        //assert testQoiOpLuma();
-        //assert testQoiOpRun();
+        assert testQoiHeader();
+        assert testQoiOpRGB();
+        assert testQoiOpRGBA();
+        assert testQoiOpIndex();
+        assert testQoiOpDiff();
+        assert testQoiOpLuma();
+        assert testQoiOpRun();
         assert testEncodeData();
 
         // ========== Test QOIDecoder ==========
-        //assert testDecodeHeader();
-        //assert testDecodeQoiOpRGB();
-        //assert testDecodeQoiOpRGBA();
-        //assert testDecodeQoiOpDiff();
-        //assert testDecodeQoiOpLuma();
-        //assert testDecodeQoiOpRun();
-        //assert testDecodeData();
+        assert testDecodeHeader();
+        assert testDecodeQoiOpRGB();
+        assert testDecodeQoiOpRGBA();
+        assert testDecodeQoiOpDiff();
+        assert testDecodeQoiOpLuma();
+        assert testDecodeQoiOpRun();
+        assert testDecodeData();
 
         System.out.println("All the tests passes. Congratulations");
     }
@@ -115,7 +116,16 @@ public final class Main {
     // ============================================================================================
     // ============================== ArrayUtils examples =========================================
     // ============================================================================================
-
+    private static boolean testEquals(){
+        byte[] array1 = {1,2,3,4};
+        byte[] array2 = {1,2,3,4};
+        byte[] array3 = {0,2,3,4};
+        boolean test1 = (ArrayUtils.equals(array1,array2));
+        boolean test2 = (ArrayUtils.equals(array1,array3));
+        boolean expected1 = true;
+        boolean expected2 = false;
+        return(test1==expected1 && test2==expected2);
+    }
     @SuppressWarnings("unused")
     private static boolean testWrap(){
         byte a = 1;
