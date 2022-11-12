@@ -70,8 +70,7 @@ public final class ArrayUtils {
      * @return (byte[]) - array with one element (value)
      */
     public static byte[] wrap(byte value){
-        byte[] array = {value};
-        return array;
+        return new byte[]{value};
     }
 
     // ==================================================================================
@@ -88,12 +87,7 @@ public final class ArrayUtils {
      */
     public static int toInt(byte[] bytes){
         assert(bytes!=null && bytes.length==4);
-        int shift = 24;
-        int integer = 0;
-        for (int i = 0;i<bytes.length;i++){
-            integer += (int) (bytes[i]<<shift);
-            shift-=8;
-        }
+        int integer = (bytes[0]<<24 & 0xff_00_00_00)|(bytes[1]<<16 & 0x00_ff_00_00)|(bytes[2]<<8 & 0x00_00_ff_00)|(bytes[3] & 0x00_00_00_ff);
         return integer;
     }
 
@@ -105,12 +99,10 @@ public final class ArrayUtils {
      */
     public static byte[] fromInt(int value){
         byte[] bytes = new byte[4];
-        int shift = 24;
-        for (int i=0;i<4;i++){
-            bytes[i] = (byte) (value>>shift);
-            value-=(byte)(value>>shift)<<shift;
-            shift-=8;
-        }
+        bytes[0] =(byte)((value>>24) & 0xFF);
+        bytes[1] = (byte)((value >> 16) & 0xFF);
+        bytes[2] = (byte)((value >> 8) & 0xFF);
+        bytes[3] = (byte)(value & 0xFF);
         return bytes;
     }
 
@@ -127,9 +119,7 @@ public final class ArrayUtils {
     public static byte[] concat(byte ... bytes){
         assert(bytes!=null);
         byte[] tab= new byte[bytes.length];
-        for(int i=0;i<bytes.length;i++){
-            tab[i]=bytes[i];
-        }
+        System.arraycopy(bytes, 0, tab, 0, bytes.length);
         return tab;
     }
 
@@ -179,7 +169,6 @@ public final class ArrayUtils {
         assert(length>=0 && length<input.length);
         assert((start+length) <=input.length);
         byte[] extract= new byte[length];
-        int i=start;
         for(int j=0;j<length;j++){
             extract[j] = input[j+start];
         }
@@ -213,7 +202,6 @@ public final class ArrayUtils {
             }
             output[i] = subList;
         }
-        System.out.println(output);
         return output;
     }
 
@@ -244,13 +232,15 @@ public final class ArrayUtils {
         byte[] g=new byte[input.length*input[0].length];
         byte[] b=new byte[input.length*input[0].length];
         byte[] a=new byte[input.length*input[0].length];
+        byte[] pixel;
         int k=0;
         for (int i=0;i<input.length;++i) {
             for (int j = 0; j < input[i].length; ++j) {
-                a[k] =(byte)((input[i][j]>>24) & 0xFF);
-                r[k] = (byte)((input[i][j] >> 16) & 0xFF);
-                g[k] = (byte)((input[i][j] >> 8) & 0xFF);
-                b[k] = (byte)(input[i][j] & 0xFF);
+                pixel = fromInt(input[i][j]);
+                a[k] = pixel[0];
+                r[k] = pixel[1];
+                g[k] = pixel[2];
+                b[k] = pixel[3];
                 k++;
             }
         }
@@ -288,10 +278,11 @@ public final class ArrayUtils {
         for(int i=0;i<input.length;i++) {
             assert (input[i] != null);
         }
-        int[] a= new int[input.length];
-        int[] r= new int[input.length];
-        int[] g= new int[input.length];
-        int[] b= new int[input.length];
+        byte[] a= new byte[input.length];
+        byte[] r= new byte[input.length];
+        byte[] g= new byte[input.length];
+        byte[] b= new byte[input.length];
+        byte[] pixel;
         int [][]output = new int[height][width];
         int k=0;
         for(int i=0;i<input.length;i++){
@@ -302,12 +293,12 @@ public final class ArrayUtils {
             a[k]=input[i][3];
             k++;
         }
-        //for( int element:b){ System.out.print(element);}
         for(int i=0;i<height;i++)
         {
             for (int j = 0; j < width; j++) {
                 if (z != k) {
-                    output[i][j] = ((a[z] << 24) + (r[z] << 16) + (g[z] << 8) + b[z]);
+                    pixel = new byte[]{a[z], r[z], g[z], b[z]};
+                    output[i][j] = (toInt(pixel));
                     z++;
                 }
             }

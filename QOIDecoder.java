@@ -31,8 +31,8 @@ public final class QOIDecoder {
         assert(ArrayUtils.equals(ArrayUtils.extract(header,0,4),QOISpecification.QOI_MAGIC));
         assert(header[12]==QOISpecification.RGB || header[12]==QOISpecification.RGBA);
         assert(header[13]==QOISpecification.sRGB || header[13]==QOISpecification.ALL);
-        int height = (int)(header[4]<<24 | header[5]<<16 | header[6]<<8 | header[7]);
-        int width = (int)(header[8]<<24 | header[9]<<16 | header[10]<<8 | header[11]);
+        int height = (int)ArrayUtils.toInt(ArrayUtils.extract(header,4,4));
+        int width = (int)ArrayUtils.toInt(ArrayUtils.extract(header,8,4));
         int[] decodedHeader = new int[]{height,width,(int)header[12],(int)header[13]};
         return  decodedHeader;
     }
@@ -57,7 +57,7 @@ public final class QOIDecoder {
         assert(position>=0 && position<buffer.length);
         assert (0 <= idx && idx < input.length);
         assert(idx+2<input.length);
-        for (int i=0;i<4;i++){
+        for (int i=0;i<3;i++){
             buffer[position][i]=input[idx];
             idx++;
         }
@@ -180,12 +180,14 @@ public final class QOIDecoder {
         while (i<data.length && ii<buffer.length){
             if (data[i]== QOISpecification.QOI_OP_RGBA_TAG){
                 i+= decodeQoiOpRGBA(buffer,data,ii,i+1)+1;
+
             }
             else if (data[i]== QOISpecification.QOI_OP_RGB_TAG){
-                i+= decodeQoiOpRGB(buffer,data,buffer[ii-1][3],ii,i+1)+1;
+                i+= decodeQoiOpRGB(buffer,data,previous_pixel[3],ii,i+1)+1;
+                // System.out.println("RGba");
             }
             else{
-                byte tag = (byte) ((data[i]>>6)<<6);
+                byte tag = (byte) (data[i]&11000000);
                 switch (tag){
                     case QOISpecification.QOI_OP_RUN_TAG:
                         repeats = decodeQoiOpRun(buffer,previous_pixel,data[i],ii);
@@ -206,11 +208,13 @@ public final class QOIDecoder {
                         break;
                 }
             }
-            previous_pixel = buffer[ii];
-            hash_table[QOISpecification.hash(buffer[ii])] = buffer[ii];
+            if (ii<buffer.length){
+                previous_pixel = buffer[ii];
+                hash_table[QOISpecification.hash(buffer[ii])] = buffer[ii];
+            }
             ii++;
         }
-        assert(ii==buffer.length && i==data.length);
+        //assert(i==data.length && ii==buffer.length);
         return buffer;
     }
 
@@ -221,7 +225,15 @@ public final class QOIDecoder {
      * @throws AssertionError if content is null
      */
     public static Image decodeQoiFile(byte[] content){
-        return Helper.fail("Not Implemented");
+        assert (content != null);
+        int[] header = new int[4];
+        byte[][] contentP = ArrayUtils.partition(content,14,content.length-22,8);
+        int[] eof=new int[8];
+        header = decodeHeader(contentP[0]);
+        byte[][] decodedPixels=decodeData(contentP[1],header[0],header[1]);
+        int[][] data = ArrayUtils.channelsToImage(decodedPixels,header[1],header[0]);
+        assert(ArrayUtils.equals(contentP[2],QOISpecification.QOI_EOF));
+        return Helper.generateImage(data, (byte)header[2],(byte) header[3]);
     }
 
 }

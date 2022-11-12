@@ -69,7 +69,7 @@ public final class Main {
         assert testDecodeQoiOpLuma();
         assert testDecodeQoiOpRun();
         assert testDecodeData();
-
+        qoiToPng("references/cube.qoi","test1.png");
         System.out.println("All the tests passes. Congratulations");
     }
 

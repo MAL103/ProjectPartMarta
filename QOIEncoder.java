@@ -238,15 +238,7 @@ public final class QOIEncoder {
     public static byte[] qoiFile(Helper.Image image){
         assert(image!=null);
         byte[] header = qoiHeader(image);
-        byte[][] content = new byte[image.data().length][];
-        /**
-         * Convert image.data() from int array to byte array to use in encodeData function
-         */
-        for (int i=0;i<image.data().length;i++){
-            for(int ii=0;ii<image.data()[0].length;ii++){
-                content[i][ii] = (byte) image.data()[i][ii];
-            }
-        }
+        byte[][] content = ArrayUtils.imageToChannels(image.data());
         byte[] encodeContent = encodeData(content);
         byte[] encodePixels = ArrayUtils.concat(header,encodeContent,QOISpecification.QOI_EOF);
         return encodePixels;
